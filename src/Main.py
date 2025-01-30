@@ -4,9 +4,10 @@ import os
 import asyncio
 
 from utils import is_valid_image, translate_text
+from Window import create_window
 
 image_name = input("Enter the image file name: ")
-image_path = os.path.join("images", image_name)
+image_path = os.path.join("../images", image_name)
 
 if is_valid_image(image_name):
     image = cv2.imread(image_path, cv2.IMREAD_COLOR)
@@ -23,7 +24,10 @@ if is_valid_image(image_name):
 
         print("Extracted Text: " + extracted_text)
 
-        asyncio.run(translate_text(extracted_text))
+        translated_text = asyncio.run(translate_text(extracted_text))
+
+        create_window(extracted_text, translated_text)
+
 else:
     print("Image is not valid.")
 

@@ -1,5 +1,6 @@
 import os
 from PIL import Image
+from googletrans import Translator
 
 def is_valid_image(image_name):
     file_dir = "images"
@@ -27,3 +28,10 @@ def is_valid_image(image_name):
     except (IOError, SyntaxError) as e:
         print(f"❌ Image file error: {e}")
         return False
+
+async def translate_text(text):
+    translator = Translator()
+    translated = await translator.translate(text, src='ja', dest='en')
+
+    print("Original Text:", text)
+    print("Translated Text:", translated.text)

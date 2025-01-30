@@ -1,8 +1,9 @@
 import cv2
 import pytesseract
 import os
+import asyncio
 
-from utils import is_valid_image
+from utils import is_valid_image, translate_text
 
 image_name = input("Enter the image file name: ")
 image_path = os.path.join("images", image_name)
@@ -18,11 +19,14 @@ if is_valid_image(image_name):
         _, thresh = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         thresh = cv2.medianBlur(thresh, 5)
 
-        extracted_Text = pytesseract.image_to_string(thresh, lang='jpn')
+        extracted_text = pytesseract.image_to_string(thresh, lang='jpn')
 
-        print("Extracted Text: " + extracted_Text)
+        print("Extracted Text: " + extracted_text)
+
+        asyncio.run(translate_text(extracted_text))
 else:
     print("Image is not valid.")
+
 
 
 

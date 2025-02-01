@@ -1,4 +1,6 @@
 import os
+from tkinter import filedialog
+
 from PIL import Image
 from googletrans import Translator
 
@@ -34,13 +36,13 @@ async def translate_text(text):
     translated = await translator.translate(text, src='ja', dest='en')
     return translated.text
 
-import tkinter as tk
+def open_file():
+    file_path = filedialog.askopenfilename(
+        title = "Selct a file",
+        filetypes = [("Image Files", ["*.jpg", "*.jpeg", "*.png", "*.gif", "*.bmp", "*.tiff"])]
 
-def create_window (translated_text):
-    root = tk.Tk()
-    root.title("JapaScan")
-    root.geometry("400x300")
-    label = tk.Label(root, text=translated_text)
-    label.pack(pady=50)
+    )
+    if file_path:
+        print("Select file: ", file_path)
 
-    root.mainloop()
+

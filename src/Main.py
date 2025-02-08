@@ -1,5 +1,4 @@
-from utils import create_window, translate_text
-
+from utils import create_window
 create_window()
 
 

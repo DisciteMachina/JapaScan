@@ -2,12 +2,17 @@ import tkinter as tk
 from tkinter import filedialog
 from googletrans import Translator
 import pytesseract
-from PIL import Image
+from PIL import Image, ImageTk
 import asyncio
+import time
 
-# Global variable to store selected file and text input
+# Global variables for selected file, manual input, and debouncing
 selected_file = ""
 manual_input_text = ""
+last_typed_time = 0
+debounce_delay = 0.5  # 500ms delay before triggering the translation
+img_label = None
+root = None 
 
 # Function to open a file dialog and select an image
 def open_file():
@@ -21,6 +26,8 @@ def open_file():
         extracted_text = extract_text(selected_file)
         translated_text = asyncio.run(translate_text(extracted_text))
         display_translation(extracted_text, translated_text)
+        display_image(selected_file)
+
 
 # Function to extract text from an image
 def extract_text(image_path):
@@ -28,55 +35,99 @@ def extract_text(image_path):
     print("\nExtracted Japanese Text:\n", extracted_text)
     return extracted_text.strip()
 
+
 # Asynchronous function to translate the text
 async def translate_text(text):
     if not text.strip():  # If no text was extracted or entered, return an error message
         return "No readable text found."
 
     translator = Translator()
-    translated = await translator.translate(text, src='ja', dest='en')
-    print("\nTranslated Text (Japanese → English):\n", translated.text)
-    return translated.text.strip()
+    try:
+        translated = await translator.translate(text, src='ja', dest='en')
+        print("\nTranslated Text (Japanese → English):\n", translated.text)
+        return translated.text.strip()
+    except Exception as e:
+        print("Error during translation:", e)
+        return "Translation Error"
+
 
 # Function to display the extracted and translated text
 def display_translation(original, translated):
     result_label.config(text=f"Extracted Text:\n{original}\n\nTranslated Text:\n{translated}")
 
-# Function to get the manual text input and process it
-def process_manual_input():
-    global manual_input_text
-    manual_input_text = text_box.get("1.0", tk.END).strip()  # Get text from the input box
-    if manual_input_text:
-        print("Manual Input Text:", manual_input_text)
-        translated_text = asyncio.run(translate_text(manual_input_text))
-        display_translation(manual_input_text, translated_text)
+
+# Function to display the selected image in the GUI
+def display_image(image_path):
+    global img_label
+    img = Image.open(image_path)
+    img.thumbnail((300, 300))  # Resize the image
+    img_tk = ImageTk.PhotoImage(img)
+    
+    # If an image was already displayed, replace it
+    if img_label:
+        img_label.config(image=img_tk)
+        img_label.image = img_tk
+    else:
+        img_label = tk.Label(root, image=img_tk)
+        img_label.image = img_tk
+        img_label.pack(pady=10)
+
+
+# Function to auto-translate the manual input text
+def auto_translate(event=None):
+    global manual_input_text, last_typed_time
+
+    # Get the current time
+    current_time = time.time()
+
+    # if the time since the last typed time is greater than the debounce delay
+    if current_time - last_typed_time > debounce_delay:
+        manual_input_text = text_box.get("1.0", tk.END).strip()  
+        if manual_input_text:
+            print("Manual Input Text:", manual_input_text)
+            translated_text = asyncio.run(translate_text(manual_input_text))
+            display_translation(manual_input_text, translated_text)
+
+    last_typed_time = current_time
+
+
+# Function to clear the text box and results
+def clear_all():
+    text_box.delete("1.0", tk.END)
+    result_label.config(text="Extracted and Translated Text will appear here")
+    if img_label:
+        img_label.config(image=None)
+        img_label.image = None
+
 
 # Create the main window
 def create_window():
-    global result_label, text_box
+    global result_label, text_box, root
 
     root = tk.Tk()
     root.title("JapaScan")
-    root.geometry("600x500")
+    root.geometry("600x600")
 
     # Button to select an image file
     file_button = tk.Button(root, height=2, width=10, text="Select Image", command=open_file)
     file_button.pack(pady=10)
 
-    input_label = tk.Label(root, text="Enter Japanese Text:", font=("Arial", 25))
+    input_label = tk.Label(root, text="Enter Japanese Text:", font=("Arial", 20))
     input_label.pack(pady=5)
     
     # Text box for manual Japanese input
-    text_box = tk.Text(root, height=5, width=20, font=("Arial", 25))  # Change font size to 14
+    text_box = tk.Text(root, height=5, width=30, font=("Arial", 16))  # Adjust font size for better fit
     text_box.pack(pady=10)
 
-    # Button to process the manual input
-    manual_button = tk.Button(root, text="Translate Text", command=process_manual_input)
-    manual_button.pack(pady=10)
+    text_box.bind("<KeyRelease>", auto_translate)
 
     # Label to display the results
-    result_label = tk.Label(root, text="Extracted and Translated Text will appear here", wraplength=450, justify="left",font=("Arial", 15))
-    result_label.pack(pady=0)
+    result_label = tk.Label(root, text="Extracted and Translated Text will appear here", wraplength=450, justify="left", font=("Arial", 15))
+    result_label.pack(pady=10)
+
+    # Button to clear the text box and results
+    clear_button = tk.Button(root, height=2, width=10, text="Clear", command=clear_all)
+    clear_button.pack(pady=10)
 
     root.mainloop()
 

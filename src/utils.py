@@ -5,6 +5,8 @@ import pytesseract
 from PIL import Image, ImageTk
 import asyncio
 import time
+import requests
+
 
 # Global variables for selected file, manual input, and debouncing
 selected_file = ""
@@ -131,4 +133,44 @@ def create_window():
 
     root.mainloop()
 
-create_window()
+def get_kanji_info(kanji):
+    url = f'https://kanjiapi.dev/v1/kanji/{kanji}'
+    
+    headers = {
+        'Accept-Encoding': 'gzip, deflate',
+    }
+    
+    response = requests.get(url, headers=headers)
+
+    # Check if the request was successful
+    if response.status_code == 200:
+        try:
+            # Set encoding to utf-8
+            response.encoding = 'utf-8'
+
+            # Try to parse the JSON
+            data = response.json()
+
+            readings = data.get('readings', [])
+            meanings = data.get('meanings', [])
+            strokes = data.get('strokes', 0)
+            jlpt = data.get('jlpt', 'N/A')
+            kanji_unicode = data.get('kanji', '')
+
+            # Print the Kanji info
+            print(f"Kanji: {kanji_unicode}")
+            print(f"Readings: {', '.join(readings)}")
+            print(f"Meanings: {', '.join(meanings)}")
+            print(f"Strokes: {strokes}")
+            print(f"JLPT Level: {jlpt}")
+            
+            
+        except ValueError as e:
+            print(f"Error parsing JSON: {e}")
+    else:
+        print(f"Error: Failed to retrieve data (Status Code: {response.status_code})")
+        print("Response Content:", response.content)  # Print raw content for inspection
+
+# Example usage
+kanji = '人'
+get_kanji_info(kanji)

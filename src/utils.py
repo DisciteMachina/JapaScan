@@ -15,8 +15,11 @@ last_typed_time = 0
 debounce_delay = 0.5  # 500ms delay before triggering the translation
 img_label = None
 root = None 
+kanji_info_label = None
+
 
 # Function to open a file dialog and select an image
+
 def open_file():
     global selected_file
     selected_file = filedialog.askopenfilename(
@@ -26,14 +29,29 @@ def open_file():
     if selected_file:
         print("Selected file:", selected_file)
         extracted_text = extract_text(selected_file)
-        translated_text = asyncio.run(translate_text(extracted_text))
-        display_translation(extracted_text, translated_text)
+        
+        # Run translation asynchronously
+        asyncio.create_task(handle_translation(extracted_text))
+        
         display_image(selected_file)
+        
+        # Look for kanji characters in the extracted text and display info
+        kanji_chars = re.findall(r'[一-龯]', extracted_text)
+        if kanji_chars:
+            kanji = kanji_chars[0] 
+            kanji_info = get_kanji_info(kanji)
+            display_kanji_info(kanji_info)
+
+async def handle_translation(text):
+    translated_text = await translate_text(text)
+    display_translation(text, translated_text)
 
 
 # Function to extract text from an image
 def extract_text(image_path):
-    extracted_text = pytesseract.image_to_string(Image.open(image_path), lang="jpn")
+    img = Image.open(image_path).convert("L")  # Convert to grayscale
+    img = img.resize((img.width // 2, img.height // 2))  # Reduce image size
+    extracted_text = pytesseract.image_to_string(img, lang="jpn")
     print("\nExtracted Japanese Text:\n", extracted_text)
     return extracted_text.strip()
 
@@ -92,6 +110,13 @@ def auto_translate(event=None):
             translated_text = asyncio.run(translate_text(manual_input_text))
             display_translation(manual_input_text, translated_text)
 
+        # Look for kanji characters in the manual input and display info
+        kanji_chars = re.findall(r'[一-龯]', manual_input_text)
+        if kanji_chars:
+            kanji = kanji_chars[0]  # Show info for the first kanji found
+            kanji_info = get_kanji_info(kanji)
+            display_kanji_info(kanji_info)
+            
     last_typed_time = current_time
 
 # Add a space after periods
@@ -106,38 +131,6 @@ def clear_all():
     if img_label:
         img_label.config(image=None)
         img_label.image = None
-
-
-# Create the main window
-def create_window():
-    global result_label, text_box, root
-
-    root = tk.Tk()
-    root.title("JapaScan")
-    root.geometry("600x600")
-
-    # Button to select an image file
-    file_button = tk.Button(root, height=2, width=10, text="Select Image", command=open_file)
-    file_button.pack(pady=10)
-
-    input_label = tk.Label(root, text="Enter Japanese Text:", font=("Arial", 20))
-    input_label.pack(pady=5)
-    
-    # Text box for manual Japanese input
-    text_box = tk.Text(root, height=5, width=30, font=("Arial", 16))  # Adjust font size for better fit
-    text_box.pack(pady=10)
-
-    text_box.bind("<KeyRelease>", auto_translate)
-
-    # Label to display the results
-    result_label = tk.Label(root, text="Extracted and Translated Text will appear here", wraplength=450, justify="left", font=("Arial", 15))
-    result_label.pack(pady=10)
-
-    # Button to clear the text box and results
-    clear_button = tk.Button(root, height=2, width=10, text="Clear", command=clear_all)
-    clear_button.pack(pady=10)
-
-    root.mainloop()
 
 def get_kanji_info(kanji):
     url = f'https://kanjiapi.dev/v1/kanji/{kanji}'
@@ -157,26 +150,24 @@ def get_kanji_info(kanji):
             # Try to parse the JSON
             data = response.json()
 
-            readings = data.get('readings', [])
-            meanings = data.get('meanings', [])
-            strokes = data.get('strokes', 0)
-            jlpt = data.get('jlpt', 'N/A')
-            kanji_unicode = data.get('kanji', '')
-
-            # Print the Kanji info
-            print(f"Kanji: {kanji_unicode}")
-            print(f"Readings: {', '.join(readings)}")
-            print(f"Meanings: {', '.join(meanings)}")
-            print(f"Strokes: {strokes}")
-            print(f"JLPT Level: {jlpt}")
+            kanji_data = {
+                'kanji': data.get('kanji', ''),
+                'readings': data.get('readings', []),
+                'meanings': data.get('meanings', []),
+                'strokes': data.get('strokes', 0),
+                'jlpt': data.get('jlpt', 'N/A')
+            }
             
-            
+            return kanji_data
         except ValueError as e:
             print(f"Error parsing JSON: {e}")
+            return None
     else:
         print(f"Error: Failed to retrieve data (Status Code: {response.status_code})")
-        print("Response Content:", response.content)  # Print raw content for inspection
-
-# Example usage
-kanji = '人'
-get_kanji_info(kanji)
+        return None
+          
+# Function to display Kanji information on the GUI
+def display_kanji_info(kanji_info):
+    if kanji_info and kanji_info_label:
+        kanji_info_label.config(
+            text=f"Kanji: {kanji_info['ka

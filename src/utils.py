@@ -6,7 +6,7 @@ from PIL import Image, ImageTk
 import asyncio
 import time
 import requests
-
+import re
 
 # Global variables for selected file, manual input, and debouncing
 selected_file = ""
@@ -46,8 +46,10 @@ async def translate_text(text):
     translator = Translator()
     try:
         translated = await asyncio.to_thread(translator.translate, text, src='ja', dest='en')
-        print("\nTranslated Text (Japanese → English):\n", translated.text)
-        return translated.text.strip()
+        fixed_translation = fix_translation_spacing(translated.text)
+        
+        print("\nTranslated Text (Japanese → English):\n", fixed_translation)
+        return fixed_translation.strip()
     except Exception as e:
         print("Error during translation:", e)
         return "Translation Error"
@@ -91,6 +93,10 @@ def auto_translate(event=None):
             display_translation(manual_input_text, translated_text)
 
     last_typed_time = current_time
+
+# Add a space after periods
+def fix_translation_spacing(text):
+    return re.sub(r'(?<!\s)([.])', r'\1 ', text)
 
 
 # Function to clear the text box and results
@@ -173,4 +179,4 @@ def get_kanji_info(kanji):
 
 # Example usage
 kanji = '人'
-ge
+get_kanji_info(kanji)

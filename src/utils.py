@@ -45,7 +45,7 @@ async def translate_text(text):
 
     translator = Translator()
     try:
-        translated = await translator.translate(text, src='ja', dest='en')
+        translated = await asyncio.to_thread(translator.translate, text, src='ja', dest='en')
         print("\nTranslated Text (Japanese → English):\n", translated.text)
         return translated.text.strip()
     except Exception as e:
@@ -173,4 +173,4 @@ def get_kanji_info(kanji):
 
 # Example usage
 kanji = '人'
-get_kanji_info(kanji)
+ge

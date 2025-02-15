@@ -8,7 +8,7 @@ import time
 import requests
 import re
 
-# Global variables for selected file, manual input, and debouncing
+# Global variables
 selected_file = ""
 manual_input_text = ""
 last_typed_time = 0
@@ -18,8 +18,7 @@ root = None
 kanji_info_label = None
 
 
-# Function to open a file dialog and select an image
-
+# Function to select an image
 def open_file():
     global selected_file
     selected_file = filedialog.askopenfilename(
@@ -30,7 +29,7 @@ def open_file():
         print("Selected file:", selected_file)
         extracted_text = extract_text(selected_file)
         
-        # Run translation asynchronously
+        # Run asynchronously
         asyncio.create_task(handle_translation(extracted_text))
         
         display_image(selected_file)
@@ -152,10 +151,11 @@ def get_kanji_info(kanji):
 
             kanji_data = {
                 'kanji': data.get('kanji', ''),
-                'readings': data.get('readings', []),
+                'kun_readings': data.get('kun_readings', []),
+                'on_readings': data.get('on_readings', []),
                 'meanings': data.get('meanings', []),
-                'strokes': data.get('strokes', 0),
-                'jlpt': data.get('jlpt', 'N/A')
+                #'strokes': data.get('strokes', 0),
+                #'jlpt': data.get('jlpt', 'N/A')
             }
             
             return kanji_data
@@ -167,7 +167,48 @@ def get_kanji_info(kanji):
         return None
           
 # Function to display Kanji information on the GUI
+# Function to display Kanji information on the GUI
 def display_kanji_info(kanji_info):
     if kanji_info and kanji_info_label:
+        kun_readings = ", ".join(kanji_info['kun_readings']) if kanji_info['kun_readings'] else "None"
+        on_readings = ", ".join(kanji_info['on_readings']) if kanji_info['on_readings'] else "None"
+        
         kanji_info_label.config(
-            text=f"Kanji: {kanji_info['ka
+            text=f"Kanji: {kanji_info['kanji']}\n"
+                 f"Kunyomi: {kun_readings}\n"
+                 f"Onyomi: {on_readings}\n"
+                 f"Meanings: {', '.join(kanji_info['meanings'])}\n"
+                 #f"Strokes: {kanji_info['strokes']}\n"
+                 #f"JLPT Level: {kanji_info['jlpt']}"
+        )
+
+# Create the main window
+def create_window():
+    global result_label, text_box, root, kanji_info_label  # Add kanji_info_label here
+
+    root = tk.Tk()
+    root.title("JapaScan")
+    root.geometry("600x600")
+
+    file_button = tk.Button(root, height=2, width=10, text="Select Image", command=open_file)
+    file_button.pack(pady=10)
+
+    input_label = tk.Label(root, text="Enter Japanese Text:", font=("Arial", 20))
+    input_label.pack(pady=5)
+    
+    text_box = tk.Text(root, height=5, width=30, font=("Arial", 16))
+    text_box.pack(pady=10)
+    text_box.bind("<KeyRelease>", auto_translate)
+
+    result_label = tk.Label(root, text="Extracted and Translated Text will appear here", wraplength=450, justify="left", font=("Arial", 15))
+    result_label.pack(pady=10)
+    
+    kanji_info_label = tk.Label(root, text="Kanji info will appear here", wraplength=450, justify="left", font=("Arial", 14))
+    kanji_info_label.pack(pady=10)
+
+    clear_button = tk.Button(root, height=2, width=10, text="Clear", command=clear_all)
+    clear_button.pack(pady=10)
+
+    root.mainloop()
+    
+create_window()
